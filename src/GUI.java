@@ -1,34 +1,66 @@
+import com.mpatric.mp3agic.InvalidDataException;
+import com.mpatric.mp3agic.UnsupportedTagException;
+
 import javax.swing.*;
 import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.MouseInputAdapter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.ArrayList;
 
 public class GUI {
 
+    private ArrayList<Music>songs;
+    private ArrayList<Music>recentlyPlayed;
+    private ArrayList<Music>mostPlayed;
     private JFrame frame;
     private JPanel mainPanel;
     private JPanel bottomPanel;
     private JPanel westPanel;
     private JPanel barPanel;
+
     private JPanel screen;
     private JPanel screen1;         //now playing screen
     private JPanel screen2;         //library screen
     private JPanel screen3;         //settings screen
-    JButton controlButtons[];
+    private JPanel titles;
+
+    private JScrollPane jScrollPane;
+
+    JButton[] controlButtons;
+    JButton[] westLabels;
+
+    private JLabel addSong;
     private JToolBar toolBar;
     private MouseHandler mouseHandler;
     private ActHandler act;
     private String mode1;       //for shuffle or repeat
     private String mode2;       //for play or pause
     private boolean mute;       //for mute or not
+    Border border;
 
     public GUI(){
+        border = BorderFactory.createLineBorder(Color.GRAY, 1);
+        songs = new ArrayList<>();
+        recentlyPlayed = new ArrayList<>();
+        mostPlayed = new ArrayList<>();
+        if (new File("songs.info").exists()){
+            loadFromFile();
+        }
         frame = createFrame("Music Player", 900, 700);
+        frame.setMinimumSize(new Dimension(900, 700));
+        frame.setMaximumSize(new Dimension(900, 700));
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                //save songs info to songs.info
+            }
+        });
         mainPanel = new JPanel(new BorderLayout());
         westPanel = new JPanel();
         bottomPanel = new JPanel(new BorderLayout());
@@ -47,23 +79,142 @@ public class GUI {
         createBarPanel();
         createMainPanel();
     }
-    public void show(){
+    private void createMainPanel(){
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setPreferredSize(new Dimension(mainPanel.getWidth(), 60));
+        createToolBar();
+        createBottomPanel();
+        topPanel.add(toolBar,  BorderLayout.WEST);
+        Color color = new Color(16, 12, 137);
+        topPanel.setBackground(color);
+        toolBar.setBackground(color);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(bottomPanel, BorderLayout.CENTER);
+        frame.add(mainPanel);
+    }
+    private void createBottomPanel(){
+        bottomPanel.add(westPanel, BorderLayout.WEST);
+        bottomPanel.add(barPanel, BorderLayout.SOUTH);
+        bottomPanel.add(screen, BorderLayout.CENTER);
+    }
+    void show(){
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
+
     private void createLibraryScreen(){
         screen2 = new JPanel();
-        screen2.setBackground(Color.GREEN);
-        JScrollPane jScrollPane = new JScrollPane(screen2);
+
+        //screen2.setBackground(Color.GREEN);
+        //screen2.setLayout(new BoxLayout(screen2, BoxLayout.Y_AXIS));
+
+        part1();
+        screen2.add(titles);
+        jScrollPane = new JScrollPane(screen2);
+    }
+    private void part1(){
+        titles = new JPanel();
+        //titles.setBorder(border);
+        titles.setPreferredSize(new Dimension(700, 40));
+        titles.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+
+        JLabel[] topTitles = createLibraryTitles();
+
+        topTitles[0].setText("name");
+        topTitles[1].setText("time");
+        topTitles[2].setText("artist");
+        topTitles[3].setText("genre");
+        topTitles[4].setText("rating");
+        topTitles[4].setPreferredSize(new Dimension(250, 40));
+
+        addSong = new JLabel("+", SwingConstants.CENTER);
+        addSong.setFont(new Font("Arial", Font.PLAIN, 30));
+        addSong.setPreferredSize(new Dimension(50, 40));
+        addSong.setBorder(border);
+        addSong.setToolTipText("Add a song");
+        addSong.addMouseListener(mouseHandler);
+
+        for (JLabel topTitle:topTitles) {
+            titles.add(topTitle);
+        }
+        titles.add(addSong);
+    }
+    private JLabel[] createLibraryTitles(){
+
+        JLabel[] labels = new JLabel[5];
+
+        for (int i = 0; i < 5; i++) {
+            labels[i] = new JLabel();
+            labels[i].setPreferredSize(new Dimension(100, 40));
+            labels[i].setBorder(border);
+            labels[i].setHorizontalAlignment(SwingConstants.CENTER);
+        }
+        return labels;
+    }
+    private void loadFromFile(){
+        ArrayList<MusicInfo> infos;
+        try {
+
+            FileInputStream fi = new FileInputStream(new File("songs.info"));
+            ObjectInputStream in = new ObjectInputStream(fi);
+            infos = (ArrayList<MusicInfo>) in.readObject();
+
+            for (MusicInfo m:infos) {
+                Music music = new Music(m.path);
+                music.setRating(m.rating);
+                music.setRecentlyPlayed(m.recent);
+                music.setNumberOfPlays(m.numPlays);
+                songs.add(music);
+                if (m.recent)
+                    recentlyPlayed.add(music);
+            }
+            in.close();
+            fi.close();
+        }catch (IOException | ClassNotFoundException | InvalidDataException | UnsupportedTagException ex){
+            ex.printStackTrace();
+        }
+
+        //TODO fill mostPlayed arrayList with songs with maximum numberOfPlays//
+    }
+    private void createLibraryScreen2(){
+
+        for (int i = 1; i < screen2.getComponentCount(); i++) {
+            screen2.remove(i);
+        }
+        for (int i = 0; i < songs.size(); i++) {
+            JPanel panel = new JPanel();
+            panel.setPreferredSize(new Dimension(700, 40));
+            panel.setMinimumSize(new Dimension(700, 40));
+            panel.setMaximumSize(new Dimension(700, 40));
+            panel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            JLabel[] labels = createLibraryTitles();
+            labels[0].setText(songs.get(i).getTitle());
+            labels[1].setText("" + songs.get(i).getTime());
+            labels[2].setText(songs.get(i).getArtist());
+            labels[3].setText(songs.get(i).getGenre());
+            labels[4].setText("" + songs.get(i).getRating());
+            labels[4].setPreferredSize(new Dimension(300, 40));
+
+            for (int j = 0; j < 5; j++) {
+                panel.add(labels[j]);
+            }
+            screen2.add(panel);
+//            screen2.revalidate();
+//            jScrollPane.revalidate();
+//            jScrollPane.repaint();
+//            frame.revalidate();
+            //screen2.add(Box.createVerticalStrut(5));
+        }
     }
     private void createPlayScreen(){
         screen1 = new JPanel();
-        screen1.setBackground(Color.ORANGE);
+        screen1.setBackground(Color.lightGray);
     }
     private void createSettings(){
         screen3 = new JPanel();
+//        screen3.setBackground(Color.lightGray);
         SpringLayout sLayout = new SpringLayout();
-        JPanel panels[] = new JPanel[3];
+        JPanel[] panels = new JPanel[3];
 
         for (int i = 0; i < 3; i++) {
             panels[i] = new JPanel();
@@ -81,9 +232,9 @@ public class GUI {
         fontSize.setFont(new Font("Arial", Font.PLAIN, 20));
         JLabel color = new JLabel("Color:");
         color.setFont(new Font("Arial", Font.PLAIN, 20));
-        String fonts[]={"Serif","SansSerif","Monospaced"};
-        String sizes[]={"10","12","14", "16", "18", "20", "22", "24"};
-        String colors[]={"red","black","pink"};
+        String[] fonts = {"Serif", "SansSerif", "Monospaced"};
+        String[] sizes = {"10", "12", "14", "16", "18", "20", "22", "24"};
+        String[] colors = {"red", "black", "pink"};
         JComboBox cb = new JComboBox(fonts);
         JComboBox cb2 = new JComboBox(sizes);
         JComboBox cb3 = new JComboBox(colors);
@@ -139,7 +290,7 @@ public class GUI {
 
         JLabel s = new JLabel("Sleep After(min):");
         s.setFont(new Font("Arial", Font.PLAIN, 20));
-        String times[]={"5","10","15", "30", "45", "60"};
+        String[] times = {"5", "10", "15", "30", "45", "60"};
         JComboBox cb4 = new JComboBox(times);
         panels[2].add(s);
         panels[2].add(cb4);
@@ -152,36 +303,46 @@ public class GUI {
         }
     }
     private void createWestPanel(){
-        westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
-        westPanel.setPreferredSize(new Dimension(200, mainPanel.getHeight()));
+        //BoxLayout boxLayout = new BoxLayout(westPanel, BoxLayout.Y_AXIS);
+        //westPanel.setLayout(boxLayout);
+        westPanel.setBorder(border);
+        westPanel.setPreferredSize(new Dimension(200, bottomPanel.getHeight()));
         westPanel.setBackground(Color.lightGray);
-        JLabel labels[] = new JLabel[5];
+        westLabels = new JButton[5];
         for (int i = 0; i < 5; i++) {
-            labels[i] = new JLabel();
-            labels[i].addMouseListener(mouseHandler);
-            labels[i].setFont(new Font("Arial", Font.PLAIN, 20));
+            westLabels[i] = new JButton();
+            westLabels[i].setPreferredSize(new Dimension(200, 30));
+            westLabels[i].addMouseListener(mouseHandler);
+            westLabels[i].setFont(new Font("Arial", Font.PLAIN, 20));
+            //westLabels[i].setBorder(border);
         }
-        labels[0].setText("  Top Charts");
-        labels[1].setText("  Recently Played");
-        labels[2].setText("  Most Played");
-        labels[3].setText("  Songs");
-        labels[4].setText("  Favorite");
+        westLabels[0].setText("Top Charts");
+        westLabels[1].setText("Recently Played");
+        westLabels[2].setText("Most Played");
+        westLabels[3].setText("Songs");
+        westLabels[4].setText("Favorite");
 
         for (int i = 0; i < 5; i++) {
-            westPanel.add(Box.createVerticalStrut(15));
-            westPanel.add(labels[i]);
+            //westPanel.add(Box.createVerticalStrut(15));
+            westPanel.add(westLabels[i]);
+            westLabels[i].setAlignmentX(Component.LEFT_ALIGNMENT);
         }
         westPanel.add(Box.createVerticalStrut(35));
 
-        JPanel tmp = new JPanel();
-        tmp.setLayout(new FlowLayout());
+        JPanel tmp = new JPanel(new BorderLayout());
+        tmp.setPreferredSize(new Dimension(180, 30));
+        tmp.setBackground(Color.lightGray);
+//        tmp.setLayout(new FlowLayout());
         JLabel p = new JLabel("Playlists");
+        p.setFont(new Font("Arial", Font.PLAIN, 20));
         //p.setLayout(new BorderLayout());
         JButton pButton = createIcon("add.png");
         pButton.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 JLabel label = new JLabel("untitled");
+                label.setPreferredSize(new Dimension(190, 30));
+                label.setHorizontalAlignment(SwingConstants.CENTER);
                 label.addMouseListener(new MouseInputAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
@@ -193,35 +354,19 @@ public class GUI {
                 westPanel.add(label);
                 westPanel.repaint();
                 frame.revalidate();
-                westPanel.add(Box.createVerticalStrut(10));
+                westPanel.add(Box.createVerticalStrut(20));
             }
         });
-        tmp.add(p);
-        tmp.add(pButton);
+        tmp.add(p, BorderLayout.WEST);
+        tmp.add(pButton, BorderLayout.EAST);
         westPanel.add(tmp);
 
     }
-    private void createMainPanel(){
-        JPanel topPanel = new JPanel(new BorderLayout());
-        createToolBar();
-        createBottomPanel();
-        topPanel.add(toolBar,  BorderLayout.WEST);
-        Color color = new Color(66, 75, 244);
-        topPanel.setBackground(color);
-        toolBar.setBackground(color);
-        mainPanel.add(topPanel, BorderLayout.NORTH);
-        mainPanel.add(bottomPanel, BorderLayout.CENTER);
-        frame.add(mainPanel);
-    }
-    private void createBottomPanel(){
-        bottomPanel.add(westPanel, BorderLayout.WEST);
-        bottomPanel.add(barPanel, BorderLayout.SOUTH);
-        bottomPanel.add(screen, BorderLayout.CENTER);
-    }
+
     private JButton createIcon(String fileName) {
         JButton button = new JButton();
         ImageIcon icon = new ImageIcon(fileName);
-        icon.setImage(icon.getImage().getScaledInstance(15, 15, Image.SCALE_SMOOTH));
+        icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
         button.setIcon(icon);
         return button;
     }
@@ -231,8 +376,8 @@ public class GUI {
         assert directoryListing != null;
 
         JPanel bar = new JPanel();
-        bar.setPreferredSize(new Dimension(mainPanel.getWidth(), 50));
-        bar.setBackground(Color.YELLOW);
+        bar.setPreferredSize(new Dimension(mainPanel.getWidth(), 70));
+        bar.setBackground(new Color(16, 12, 137));
         SpringLayout sLayout = new SpringLayout();
         bar.setLayout(sLayout);
 
@@ -241,17 +386,20 @@ public class GUI {
 
         for (int i = 0; i < 7; i++) {
 
-            if (directoryListing[i].getName().equals(".DS_Store"))
-                continue;
-
-            controlButtons[i-1] = createIcon("pics/" + directoryListing[i].getName());
-            controlButtons[i-1].addMouseListener(mouseHandler);
-            controlPanel.add(controlButtons[i-1]);
-
+            if (directoryListing[i].getName().endsWith(".png")){
+                controlButtons[i-1] = createIcon("pics/" + directoryListing[i].getName());
+                controlButtons[i-1].addMouseListener(mouseHandler);
+                controlPanel.add(controlButtons[i-1]);
+            }
         }
 
         JLabel name = new JLabel("name");
+        name.setForeground(Color.WHITE);
         JLabel lyrics = new JLabel("Lyrics");
+        lyrics.setForeground(Color.WHITE);
+        lyrics.setHorizontalAlignment(SwingConstants.CENTER);
+        lyrics.setBorder(border);
+        lyrics.setPreferredSize(new Dimension(50, 30));
         lyrics.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -263,11 +411,11 @@ public class GUI {
         bar.add(name);
         bar.add(controlPanel);
         bar.add(lyrics);
-        sLayout.putConstraint(SpringLayout.NORTH, name, 15, SpringLayout.NORTH, bar);
+        sLayout.putConstraint(SpringLayout.NORTH, name, 25, SpringLayout.NORTH, bar);
         sLayout.putConstraint(SpringLayout.WEST, name, 35, SpringLayout.WEST, bar);
-        sLayout.putConstraint(SpringLayout.NORTH, lyrics, 15, SpringLayout.NORTH, bar);
-        sLayout.putConstraint(SpringLayout.WEST, lyrics, 50, SpringLayout.EAST, controlPanel);
-        sLayout.putConstraint(SpringLayout.NORTH, controlPanel, 5, SpringLayout.NORTH, bar);
+        sLayout.putConstraint(SpringLayout.NORTH, lyrics, 20, SpringLayout.NORTH, bar);
+        sLayout.putConstraint(SpringLayout.WEST, lyrics, 40, SpringLayout.EAST, controlPanel);
+        sLayout.putConstraint(SpringLayout.NORTH, controlPanel, 15, SpringLayout.NORTH, bar);
         sLayout.putConstraint(SpringLayout.WEST, controlPanel, 250, SpringLayout.EAST, name);
 
         JProgressBar progressBar = new JProgressBar(0, 100);
@@ -276,21 +424,22 @@ public class GUI {
         barPanel.add(bar, BorderLayout.CENTER);
     }
     private void createToolBar(){
-        Color color = new Color(66, 75, 244);
+        //Color color = new Color(0, 0, 0);
         toolBar = new JToolBar();
         JLabel nowPlaying = new JLabel("Now Playing   ");
-        nowPlaying.setFont(new Font("Arial", Font.PLAIN, 50));
-        nowPlaying.setBackground(color);
+        nowPlaying.setFont(new Font("Arial", Font.PLAIN, 45));
+        //nowPlaying.setBackground(color);
         nowPlaying.setForeground(Color.WHITE);
         nowPlaying.addMouseListener(mouseHandler);
         JLabel library = new JLabel("   Library   ");
-        library.setFont(new Font("Arial", Font.PLAIN, 50));
-        library.setBackground(color);
+        library.setFont(new Font("Arial", Font.PLAIN, 45));
+
+        //library.setBackground(color);
         library.setForeground(Color.WHITE);
         library.addMouseListener(mouseHandler);
         JLabel settings = new JLabel("   Settings   ");
-        settings.setFont(new Font("Arial", Font.PLAIN, 50));
-        settings.setBackground(color);
+        settings.setFont(new Font("Arial", Font.PLAIN, 45));
+        //settings.setBackground(color);
         settings.setForeground(Color.WHITE);
         settings.addMouseListener(mouseHandler);
         toolBar.add(nowPlaying);
@@ -325,26 +474,29 @@ public class GUI {
 
         @Override
         public void mouseClicked(MouseEvent e) {
+            //if user clicked on now playing tab
             if (e.getSource() == toolBar.getComponent(0)) {
                 bottomPanel.remove(2);
                 bottomPanel.add(screen1, BorderLayout.CENTER);
                 westPanel.hide();
                 barPanel.show();
             }
+            //if user clicked on library tab
             else if (e.getSource() == toolBar.getComponent(1)){
-
                 bottomPanel.remove(2);
                 bottomPanel.add(screen2, BorderLayout.CENTER);
                 barPanel.hide();
                 westPanel.show();
                 bottomPanel.revalidate();
             }
+            //if user clicked on settings tab
             else if (e.getSource() == toolBar.getComponent(2)) {
                 bottomPanel.remove(2);
                 bottomPanel.add(screen3, BorderLayout.CENTER);
                 westPanel.hide();
                 barPanel.hide();
             }
+            //barPanel buttons
             //mode = shuffle
             if(e.getSource() == controlButtons[0]){
                 mode1 = "shuffle";
@@ -371,7 +523,6 @@ public class GUI {
                     icon.setImage(icon.getImage().getScaledInstance(15, 15, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
                 }
-
             }
             //play next song
             else if(e.getSource() == controlButtons[4]){
@@ -393,6 +544,44 @@ public class GUI {
                     controlButtons[5].setIcon(icon);
                 }
             }
+            if (e.getSource() == addSong){
+                JFileChooser chooser = new JFileChooser();
+                FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                        "mp3, ogg, wav", "mp3", "ogg", "wav");
+                chooser.setFileFilter(filter);
+                int returnVal = chooser.showOpenDialog(null);
+                if(returnVal == JFileChooser.APPROVE_OPTION) {
+                    Music newMusic = null;
+                    try {
+                        newMusic = new Music(chooser.getSelectedFile().getPath());
+                        songs.add(newMusic);
+                    } catch (IOException | UnsupportedTagException | InvalidDataException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+            if (e.getSource() == westLabels[0]){
+                screen2.removeAll();
+            }
+            else if (e.getSource() == westLabels[1]){
+                //show recently played
+                screen2.add(titles);
+            }
+            else if (e.getSource() == westLabels[2]){
+                //show mostly played
+                screen2.add(titles);
+            }
+            else if (e.getSource() == westLabels[3]){
+                screen2.add(titles);
+                createLibraryScreen2();
+                bottomPanel.revalidate();
+                mainPanel.revalidate();
+                mainPanel.repaint();
+            }
+            else if (e.getSource() == westLabels[4]){
+                screen2.add(titles);
+            }
+
             bottomPanel.revalidate();
             mainPanel.revalidate();
             mainPanel.repaint();
