@@ -6,18 +6,19 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Line2D;
 import java.io.File;
-
 
 public class GUI {
 
     private JFrame frame;
     private JPanel mainPanel;
-    private JPanel westPanel;
     private JPanel bottomPanel;
+    private JPanel westPanel;
     private JPanel barPanel;
     private JPanel screen;
+    private JPanel screen1;         //now playing screen
+    private JPanel screen2;         //library screen
+    private JPanel screen3;         //settings screen
     JButton controlButtons[];
     private JToolBar toolBar;
     private MouseHandler mouseHandler;
@@ -39,36 +40,38 @@ public class GUI {
         mode2 = "pause";
         mute = false;
         createTrayIcon();
-        createMainPanel();
+        createSettings();
+        createLibraryScreen();
+        createPlayScreen();
         createWestPanel();
         createBarPanel();
+        createMainPanel();
     }
     public void show(){
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
     private void createLibraryScreen(){
-        screen.removeAll();
-        JScrollPane jScrollPane = new JScrollPane(screen);
+        screen2 = new JPanel();
+        screen2.setBackground(Color.GREEN);
+        JScrollPane jScrollPane = new JScrollPane(screen2);
     }
     private void createPlayScreen(){
-        screen.removeAll();
+        screen1 = new JPanel();
+        screen1.setBackground(Color.ORANGE);
     }
     private void createSettings(){
-        screen.removeAll();
-
+        screen3 = new JPanel();
         SpringLayout sLayout = new SpringLayout();
         JPanel panels[] = new JPanel[3];
 
         for (int i = 0; i < 3; i++) {
             panels[i] = new JPanel();
             panels[i].setLayout(sLayout);
-            panels[i].setPreferredSize(new Dimension(mainPanel.getWidth() - 10, 200));
-
+            panels[i].setPreferredSize(new Dimension(mainPanel.getWidth(), 200));
         }
-        BoxLayout bLayout = new BoxLayout(screen, BoxLayout.Y_AXIS);
-        screen.setLayout(bLayout);
-        //screen.setBorder(new EmptyBorder(new Insets(50, 80, 50, 80)));
+        BoxLayout bLayout = new BoxLayout(screen3, BoxLayout.Y_AXIS);
+        screen3.setLayout(bLayout);
 
         JLabel l = new JLabel("Lyrics:");
         l.setFont(new Font("Arial", Font.PLAIN, 40));
@@ -93,15 +96,15 @@ public class GUI {
         panels[0].add(color);
         panels[0].add(cb3);
 
-        sLayout.putConstraint(SpringLayout.NORTH, l, 20, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, font, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, fontSize, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, color, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, cb, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, cb2, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, cb3, 100, SpringLayout.NORTH, screen);
-        sLayout.putConstraint(SpringLayout.WEST, l, 50, SpringLayout.WEST, screen);
-        sLayout.putConstraint(SpringLayout.WEST, font, 50, SpringLayout.WEST, screen);
+        sLayout.putConstraint(SpringLayout.NORTH, l, 20, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, font, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, fontSize, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, color, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, cb, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, cb2, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, cb3, 100, SpringLayout.NORTH, screen3);
+        sLayout.putConstraint(SpringLayout.WEST, l, 50, SpringLayout.WEST, screen3);
+        sLayout.putConstraint(SpringLayout.WEST, font, 50, SpringLayout.WEST, screen3);
         sLayout.putConstraint(SpringLayout.WEST, cb, 2, SpringLayout.EAST, font);
         sLayout.putConstraint(SpringLayout.WEST, fontSize, 50, SpringLayout.EAST, cb);
         sLayout.putConstraint(SpringLayout.WEST, cb2, 2, SpringLayout.EAST, fontSize);
@@ -129,12 +132,10 @@ public class GUI {
                 q.setVisible(true);
             }
         });
-       // Border blackLine = BorderFactory.createLineBorder(Color.black);
-        //panels[1].setBorder(blackLine);
         q.setSize(100, 50);
         panels[1].add(q);
-        sLayout.putConstraint(SpringLayout.WEST, q, 50, SpringLayout.WEST, screen);
-        sLayout.putConstraint(SpringLayout.NORTH, q, 50, SpringLayout.NORTH, screen);
+        sLayout.putConstraint(SpringLayout.WEST, q, 50, SpringLayout.WEST, screen3);
+        sLayout.putConstraint(SpringLayout.NORTH, q, 50, SpringLayout.NORTH, screen3);
 
         JLabel s = new JLabel("Sleep After(min):");
         s.setFont(new Font("Arial", Font.PLAIN, 20));
@@ -143,13 +144,12 @@ public class GUI {
         panels[2].add(s);
         panels[2].add(cb4);
 
-        sLayout.putConstraint(SpringLayout.WEST, s, 50, SpringLayout.WEST, screen);
+        sLayout.putConstraint(SpringLayout.WEST, s, 50, SpringLayout.WEST, screen3);
         sLayout.putConstraint(SpringLayout.WEST, cb4, 2, SpringLayout.EAST, s);
 
         for (int i = 0; i < 3; i++) {
-            screen.add(panels[i]);
+            screen3.add(panels[i]);
         }
-
     }
     private void createWestPanel(){
         westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
@@ -160,7 +160,6 @@ public class GUI {
             labels[i] = new JLabel();
             labels[i].addMouseListener(mouseHandler);
             labels[i].setFont(new Font("Arial", Font.PLAIN, 20));
-
         }
         labels[0].setText("  Top Charts");
         labels[1].setText("  Recently Played");
@@ -174,33 +173,31 @@ public class GUI {
         }
         westPanel.add(Box.createVerticalStrut(35));
 
-        JLabel tmp = new JLabel();
-        tmp.setLayout(new BorderLayout());
+        JPanel tmp = new JPanel();
+        tmp.setLayout(new FlowLayout());
         JLabel p = new JLabel("Playlists");
-        p.setLayout(new BorderLayout());
-        JButton pButton = new JButton();
-        ImageIcon icon = new ImageIcon("add.png");
-        icon.setImage(icon.getImage().getScaledInstance(10, 10, Image.SCALE_SMOOTH));
-        pButton.setIcon(icon);
+        //p.setLayout(new BorderLayout());
+        JButton pButton = createIcon("add.png");
         pButton.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                JTextField label = new JTextField("untitled");
+                JLabel label = new JLabel("untitled");
                 label.addMouseListener(new MouseInputAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         if (e.getButton() == MouseEvent.BUTTON3){
-
+                            System.out.println("rename");
                         }
                     }
                 });
                 westPanel.add(label);
+                westPanel.repaint();
+                frame.revalidate();
                 westPanel.add(Box.createVerticalStrut(10));
             }
         });
-        tmp.add(p, BorderLayout.WEST);
-        tmp.add(pButton, BorderLayout.EAST);
-        //westPanel.add(p);
+        tmp.add(p);
+        tmp.add(pButton);
         westPanel.add(tmp);
 
     }
@@ -208,7 +205,6 @@ public class GUI {
         JPanel topPanel = new JPanel(new BorderLayout());
         createToolBar();
         createBottomPanel();
-        //bottomPanel.add(westPanel, BorderLayout.WEST);
         topPanel.add(toolBar,  BorderLayout.WEST);
         Color color = new Color(66, 75, 244);
         topPanel.setBackground(color);
@@ -219,8 +215,8 @@ public class GUI {
     }
     private void createBottomPanel(){
         bottomPanel.add(westPanel, BorderLayout.WEST);
-        bottomPanel.add(screen, BorderLayout.CENTER);
         bottomPanel.add(barPanel, BorderLayout.SOUTH);
+        bottomPanel.add(screen, BorderLayout.CENTER);
     }
     private JButton createIcon(String fileName) {
         JButton button = new JButton();
@@ -329,20 +325,25 @@ public class GUI {
 
         @Override
         public void mouseClicked(MouseEvent e) {
-            if (e.getSource() == toolBar.getComponent(0)){
+            if (e.getSource() == toolBar.getComponent(0)) {
+                bottomPanel.remove(2);
+                bottomPanel.add(screen1, BorderLayout.CENTER);
                 westPanel.hide();
                 barPanel.show();
-                createPlayScreen();
             }
             else if (e.getSource() == toolBar.getComponent(1)){
+
+                bottomPanel.remove(2);
+                bottomPanel.add(screen2, BorderLayout.CENTER);
                 barPanel.hide();
                 westPanel.show();
-                createLibraryScreen();
+                bottomPanel.revalidate();
             }
             else if (e.getSource() == toolBar.getComponent(2)) {
+                bottomPanel.remove(2);
+                bottomPanel.add(screen3, BorderLayout.CENTER);
                 westPanel.hide();
                 barPanel.hide();
-                createSettings();
             }
             //mode = shuffle
             if(e.getSource() == controlButtons[0]){
@@ -354,7 +355,7 @@ public class GUI {
             }
             //play previous song
             else if(e.getSource() == controlButtons[2]){
-
+                // TODO //
             }
             //play or pause
             else if(e.getSource() == controlButtons[3]){
@@ -369,8 +370,8 @@ public class GUI {
                     ImageIcon icon = new ImageIcon("pics/7-pause.png");
                     icon.setImage(icon.getImage().getScaledInstance(15, 15, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
-
                 }
+
             }
             //play next song
             else if(e.getSource() == controlButtons[4]){
@@ -392,7 +393,9 @@ public class GUI {
                     controlButtons[5].setIcon(icon);
                 }
             }
-
+            bottomPanel.revalidate();
+            mainPanel.revalidate();
+            mainPanel.repaint();
             frame.revalidate();
         }
     }
