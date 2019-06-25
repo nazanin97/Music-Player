@@ -53,9 +53,7 @@ public class GUI {
         if (new File("songs.info").exists()){
             loadFromFile();
         }
-        if (new File("settings.txt").exists()){
-            loadSettings();
-        }
+
         frame = createFrame("Music Player", 900, 700);
         frame.setMinimumSize(new Dimension(900, 700));
         frame.setMaximumSize(new Dimension(900, 700));
@@ -83,6 +81,9 @@ public class GUI {
         createWestPanel();
         createBarPanel();
         createMainPanel();
+        if (new File("settings.txt").exists()){
+            loadSettings();
+        }
     }
     private void createMainPanel(){
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -179,6 +180,9 @@ public class GUI {
             String value = listLines.get(i).split(":")[1];
             comboBoxes[i].setSelectedItem(value);
         }
+        Lyrics.setFontName( "" + comboBoxes[0].getSelectedItem());
+        Lyrics.setFontSize(Integer.valueOf("" + comboBoxes[1].getSelectedItem()));
+        Lyrics.setColor("" + comboBoxes[2].getSelectedItem());
     }
     private void saveSettings(){
 

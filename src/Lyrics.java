@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.io.File;
 
 public class Lyrics {
@@ -18,6 +19,23 @@ public class Lyrics {
     }
 
     public static void setColor(String color) {
+
         Lyrics.color = color;
+    }
+
+    public static int getFontSize() {
+        return fontSize;
+    }
+
+    public static String getColor() {
+        return color;
+    }
+
+    public static String getFontName() {
+        return fontName;
+    }
+
+    public File getText() {
+        return text;
     }
 }
