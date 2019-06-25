@@ -2,12 +2,15 @@ import com.mpatric.mp3agic.ID3v1;
 import com.mpatric.mp3agic.ID3v2;
 import com.mpatric.mp3agic.Mp3File;
 import com.mpatric.mp3agic.UnsupportedTagException;
-import com.sun.media.sound.InvalidDataException;
-import com.mpatric.mp3agic.*;
 import javax.swing.*;
+import javax.swing.border.Border;
+import java.awt.*;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 
-public class Music {
+public class Music extends JPanel{
     private int rating;
     private String title;
     private Lyrics lyrics;
@@ -56,6 +59,7 @@ public class Music {
 
     public Music(String dir) throws IOException, UnsupportedTagException, com.mpatric.mp3agic.InvalidDataException {
 
+        this.path = dir;
         Mp3File mp3file = new Mp3File(dir);
         time = mp3file.getLengthInSeconds();
 
@@ -87,9 +91,45 @@ public class Music {
         System.out.println("Time = " + time);
         System.out.println("Artist = " + artist);
         System.out.println("Genre = " + genre);
-
+        makeMusicPanel();
     }
+    private void makeMusicPanel(){
 
+        this.setLayout(new FlowLayout());
+
+        this.setMinimumSize(new Dimension(700, 40));
+        this.setMaximumSize(new Dimension(700, 40));
+
+        JLabel[] labels = new JLabel[4];
+
+        for (int i = 0; i < 4; i++) {
+            labels[i] = new JLabel();
+            labels[i].setPreferredSize(new Dimension(100, 40));
+            labels[i].setHorizontalAlignment(SwingConstants.CENTER);
+        }
+
+        labels[0].setText(getTitle());
+        labels[1].setText(getTime());
+        labels[2].setText(getArtist());
+        labels[3].setText(getGenre());
+        JPanel hold = new JPanel();
+        hold.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        hold.setPreferredSize(new Dimension(400, 40));
+        for (int j = 0; j < 4; j++) {
+            hold.add(labels[j]);
+        }
+        JPanel stars = new JPanel();
+        stars.setPreferredSize(new Dimension(300, 40));
+        stars.setLayout(new FlowLayout(FlowLayout.CENTER));
+        stars.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 50));
+
+        for (int i = 0; i < 5; i++) {
+            Star button = new Star();
+            stars.add(button);
+        }
+        this.add(hold);
+        this.add(stars);
+    }
     public void setRating(int rating) {
         this.rating = rating;
     }
@@ -129,4 +169,28 @@ public class Music {
     public String getPath() {
         return path;
     }
+    public static void saveMusics(ArrayList<Music> musics){
+        ArrayList<MusicInfo>musicInfos = new ArrayList<>();
+
+        for (Music d:musics) {
+            MusicInfo musicInfo = new MusicInfo(d);
+            musicInfos.add(musicInfo);
+        }
+
+        writeInfos(musicInfos);
+    }
+    private static void writeInfos(ArrayList<MusicInfo>m){
+        try{
+            FileOutputStream fileOut = new FileOutputStream("songs.info");
+            ObjectOutputStream oos = new ObjectOutputStream (fileOut);
+            oos.writeObject(m);
+            oos.close();
+            fileOut.close();
+
+        }catch(Exception e){
+            System.err.println(e.getMessage());
+        }
+
+    }
+
 }
