@@ -1,17 +1,28 @@
 import com.mpatric.mp3agic.*;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
 import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.TagException;
 import javax.sound.sampled.*;
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.event.MouseInputAdapter;
 import java.awt.*;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+
+import static javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED;
+import static javax.sound.sampled.AudioSystem.getAudioInputStream;
 
 public class Music extends JPanel{
 //    private String status="";
@@ -32,6 +43,7 @@ public class Music extends JPanel{
     private boolean recentlyPlayed;
     private int numberOfPlays;
     private ArrayList<Star>starsButtons;
+    private File f;
 
 
     public String getTitle() {
@@ -74,7 +86,7 @@ public class Music extends JPanel{
         extractMetaData(dir);
         makeMusicPanel();
     }
-//    private void extractMetaData(String dir) throws IOException, CannotReadException, TagException, InvalidAudioFrameException
+    //    private void extractMetaData(String dir) throws IOException, CannotReadException, TagException, InvalidAudioFrameException
 //            , ReadOnlyFileException,UnsupportedAudioFileException,
 //            IOException, LineUnavailableException
 //
@@ -110,32 +122,18 @@ public class Music extends JPanel{
 //        System.out.println("Genre = " + genre);
 //
 //    }
-    private void extractMetaData(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
-        Mp3File mp3file = new Mp3File(dir);
-        time = mp3file.getLengthInSeconds();
-
-        if (mp3file.hasId3v1Tag()) {
-            ID3v1 id3v1Tag = mp3file.getId3v1Tag();
-            this.artist = id3v1Tag.getArtist();
-            this.title = id3v1Tag.getTitle();
-            this.album = id3v1Tag.getAlbum();
-            this.genre = id3v1Tag.getGenreDescription();
-        }
-
-        if (mp3file.hasId3v2Tag()) {
-            ID3v2 id3v2Tag = mp3file.getId3v2Tag();
-
-            if (this.artist == "")
-                this.artist = id3v2Tag.getArtist();
-            if (this.title == "")
-                this.title = id3v2Tag.getTitle();
-            if (this.album == "")
-                this.album = id3v2Tag.getAlbum();
-//            if (this.genre == "" || this.genre.toLowerCase()=="unknown")
-//                this.genre = id3v2Tag.getGenreDescription();
-
-            albumImageData = id3v2Tag.getAlbumImage();
-        }
+    private void extractMetaData(String dir) throws InvalidDataException, IOException, UnsupportedTagException, CannotReadException , TagException ,InvalidAudioFrameException
+            ,ReadOnlyFileException ,UnsupportedAudioFileException,
+            IOException, LineUnavailableException{
+        this.path = dir;
+        this.f = new File(dir);
+        AudioFile audioFile = AudioFileIO.read(new File(dir));
+        this.artist = audioFile.getTag().getFirst(FieldKey.ARTIST);
+        this.title = audioFile.getTag().getFirst(FieldKey.TITLE);
+        this.album = audioFile.getTag().getFirst(FieldKey.ALBUM);
+        this.genre = audioFile.getTag().getFirst(FieldKey.GENRE);
+        Tag tag = audioFile.getTag();
+        this.time = audioFile.getAudioHeader().getTrackLength() ;
         System.out.println("Title = " + title);
         System.out.println("Album = " + album);
         System.out.println("Time = " + time);
@@ -147,6 +145,11 @@ public class Music extends JPanel{
             @Override
             public void mouseClicked(MouseEvent e) {
                 GUI.nowPlaying = Music.this;
+                Border border = BorderFactory.createLineBorder(Color.BLUE, 1);
+                for (Music m:GUI.songs) {
+                    m.setBorder(null);
+                }
+                Music.this.setBorder(border);
             }
         });
         this.setLayout(new FlowLayout());
@@ -263,10 +266,48 @@ public class Music extends JPanel{
     }
     public void playMusic() {
 
+        numberOfPlays++;
+//        try (final AudioInputStream in = getAudioInputStream(f)) {
+//
+//            final AudioFormat outFormat = getOutFormat(in.getFormat());
+//            final DataLine.Info info = new DataLine.Info(SourceDataLine.class, outFormat);
+//
+//            try (final SourceDataLine line =
+//                         (SourceDataLine) AudioSystem.getLine(info)) {
+//
+//                if (line != null) {
+//                    line.open(outFormat);
+//                    line.start();
+//                    stream(getAudioInputStream(outFormat, in), line);
+//                    line.drain();
+//                    line.stop();
+//                }
+//            }
+//
+//        } catch (UnsupportedAudioFileException
+//                | LineUnavailableException
+//                | IOException e) {
+//            throw new IllegalStateException(e);
+//        }
+    }
 
+
+
+
+    private AudioFormat getOutFormat(AudioFormat inFormat) {
+        final int ch = inFormat.getChannels();
+        final float rate = inFormat.getSampleRate();
+        return new AudioFormat(PCM_SIGNED, rate, 16, ch, ch * 2, rate, false);
+    }
+
+    private void stream(AudioInputStream in, SourceDataLine line)
+            throws IOException {
+        final byte[] buffer = new byte[65536];
+        for (int n = 0; n != -1; n = in.read(buffer, 0, buffer.length)) {
+            line.write(buffer, 0, n);
+        }
     }
     public void pauseMusic(){
 
     }
 }
-

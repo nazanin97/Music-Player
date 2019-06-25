@@ -3,9 +3,9 @@ import java.util.ArrayList;
 public class Playlist {
     ArrayList<Music>musics;
     private String name;
-    public Playlist(){
+    public Playlist(String name){
         musics = new ArrayList<>();
-
+        this.name = name;
     }
     public void addMusic(Music music){
         musics.add(music);

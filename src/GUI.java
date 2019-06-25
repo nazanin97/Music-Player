@@ -18,10 +18,13 @@ import java.util.ArrayList;
 
 public class GUI {
 
-    private ArrayList<Music>songs;
+    static ArrayList<Music>songs;
     private ArrayList<Music>recentlyPlayed;
     private ArrayList<Music>mostPlayed;
+    private ArrayList<Playlist>playlists;
+
     public static Music nowPlaying;
+
     private static JFrame frame;
     private static JPanel mainPanel;
     private static JPanel bottomPanel;
@@ -48,6 +51,7 @@ public class GUI {
     private boolean mute;       //for mute or not
     Border border;
     JComboBox[] comboBoxes;
+
     public GUI(){
         comboBoxes = new JComboBox[4];
         for (int i = 0; i < 4; i++) {
@@ -57,6 +61,7 @@ public class GUI {
         songs = new ArrayList<>();
         recentlyPlayed = new ArrayList<>();
         mostPlayed = new ArrayList<>();
+        playlists = new ArrayList<>();
         if (new File("songs.info").exists()){
             loadFromFile();
         }
@@ -76,11 +81,15 @@ public class GUI {
         bottomPanel = new JPanel(new BorderLayout());
         barPanel = new JPanel(new BorderLayout());
         screen = new JPanel();
+
         mouseHandler = new MouseHandler();
         act = new ActHandler();
+
         controlButtons = new JButton[6];
+
         mode2 = "pause";
         mute = false;
+
         createTrayIcon();
         createSettings();
         createLibraryScreen();
@@ -111,6 +120,10 @@ public class GUI {
         bottomPanel.add(screen, BorderLayout.CENTER);
     }
     static void repaint(){
+//        nowPlaying.revalidate();
+//        nowPlaying.repaint();
+        barPanel.revalidate();
+        barPanel.repaint();
         screen2.revalidate();
         screen2.repaint();
         bottomPanel.revalidate();
@@ -131,6 +144,7 @@ public class GUI {
         part1();
         screen2.add(titles);
         jScrollPane = new JScrollPane(screen2);
+
     }
     private void part1(){
         titles = new JPanel();
@@ -189,6 +203,7 @@ public class GUI {
         Lyrics.setFontName( "" + comboBoxes[0].getSelectedItem());
         Lyrics.setFontSize(Integer.valueOf("" + comboBoxes[1].getSelectedItem()));
         Lyrics.setColor("" + comboBoxes[2].getSelectedItem());
+
     }
     private void saveSettings(){
 
@@ -225,20 +240,10 @@ public class GUI {
             }
             in.close();
             fi.close();
-        }catch (IOException | ClassNotFoundException | InvalidDataException | UnsupportedTagException ex){
+        }catch (IOException | ClassNotFoundException | InvalidDataException |
+                UnsupportedTagException | InvalidAudioFrameException | LineUnavailableException |
+                UnsupportedAudioFileException | TagException | ReadOnlyFileException | CannotReadException ex){
             ex.printStackTrace();
-        } catch (CannotReadException e) {
-            e.printStackTrace();
-        } catch (ReadOnlyFileException e) {
-            e.printStackTrace();
-        } catch (TagException e) {
-            e.printStackTrace();
-        } catch (UnsupportedAudioFileException e) {
-            e.printStackTrace();
-        } catch (LineUnavailableException e) {
-            e.printStackTrace();
-        } catch (InvalidAudioFrameException e) {
-            e.printStackTrace();
         }
 
         //TODO fill mostPlayed arrayList with songs with maximum numberOfPlays//
@@ -389,15 +394,17 @@ public class GUI {
         pButton.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                Playlist newPlaylist = new Playlist("untitled");
+                playlists.add(newPlaylist);
                 JLabel label = new JLabel("untitled");
                 label.setPreferredSize(new Dimension(190, 30));
                 label.setHorizontalAlignment(SwingConstants.CENTER);
+
                 label.addMouseListener(new MouseInputAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        if (e.getButton() == MouseEvent.BUTTON3){
-                            System.out.println("rename");
-                        }
+                        screen2.removeAll();
+                        screen2.add(titles);
                     }
                 });
                 westPanel.add(label);
@@ -444,7 +451,10 @@ public class GUI {
             }
         }
 
-        JLabel name = new JLabel("name");
+        JLabel name = new JLabel("song's name");
+        if (nowPlaying != null){
+            name.setText(nowPlaying.getTitle());
+        }
         name.setForeground(Color.WHITE);
         JLabel lyrics = new JLabel("Lyrics");
         lyrics.setForeground(Color.WHITE);
@@ -454,9 +464,46 @@ public class GUI {
         lyrics.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                JFrame lyrics = createFrame("Lyrics", 500, 200);
-                lyrics.add(new TextField("........"));
-                lyrics.setVisible(true);
+                JFrame jFrame = createFrame("Lyrics", 600, 400);
+                jFrame.setLayout(new BorderLayout());
+
+                JPanel holding = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                holding.setPreferredSize(new Dimension(100, 30));
+                JButton findLyrics = new JButton();
+                findLyrics.setText("Find Lyrics?");
+                findLyrics.setFont(new Font("Arial", Font.PLAIN, 15));
+
+
+                JPanel lyricsHolder = new JPanel();
+                JScrollPane jScrollPane1 = new JScrollPane();
+                jScrollPane1.add(lyricsHolder);
+                lyricsHolder.setPreferredSize(new Dimension(550, 300));
+
+                JTextArea content = new JTextArea();
+                content.setEditable(false);
+                content.setPreferredSize(new Dimension(550, 300));
+                JScrollPane scrollableTextArea = new JScrollPane(content);
+                scrollableTextArea.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+                scrollableTextArea.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+
+                findLyrics.addMouseListener(new MouseInputAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        HttpURLConnectionExample h = null;
+                        try {
+                            h = new HttpURLConnectionExample(nowPlaying.getTitle(), nowPlaying.getArtist());
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                        content.setText(h.getLyric());
+                    }
+                });
+                holding.add(findLyrics);
+                lyricsHolder.add(scrollableTextArea);
+                jFrame.add(holding, BorderLayout.NORTH);
+                jFrame.add(lyricsHolder, BorderLayout.CENTER);
+                jFrame.setVisible(true);
             }
         });
         bar.add(name);
@@ -523,11 +570,12 @@ public class GUI {
     }
     private void showFavorites(){
         for (int i = 0; i < songs.size(); i++) {
+            songs.get(i).setRating();
             if (songs.get(i).getRating() == 5){
                 screen2.add(songs.get(i));
-                screen2.revalidate();
             }
         }
+        repaint();
     }
     private class MouseHandler extends MouseInputAdapter {
 
@@ -588,7 +636,6 @@ public class GUI {
                     controlButtons[3].setIcon(icon);
 
                     nowPlaying.playMusic();
-
                 }
             }
             //play next song

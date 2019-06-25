@@ -38,6 +38,7 @@ class Star extends JButton {
                     setIcon(icon);
                     mode = 1;
                 }
+
                 GUI.repaint();
             }
         });
