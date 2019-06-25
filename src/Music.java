@@ -1,10 +1,9 @@
-import com.mpatric.mp3agic.ID3v1;
-import com.mpatric.mp3agic.ID3v2;
-import com.mpatric.mp3agic.Mp3File;
-import com.mpatric.mp3agic.UnsupportedTagException;
+import com.mpatric.mp3agic.*;
+
 import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.event.MouseInputAdapter;
 import java.awt.*;
+import java.awt.event.MouseEvent;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -22,6 +21,7 @@ public class Music extends JPanel{
     private byte[] albumImageData;
     private boolean recentlyPlayed;
     private int numberOfPlays;
+    private MouseHandler mouseHandler;
 
     public String getTitle() {
         return title;
@@ -57,9 +57,13 @@ public class Music extends JPanel{
         this.numberOfPlays = numberOfPlays;
     }
 
-    public Music(String dir) throws IOException, UnsupportedTagException, com.mpatric.mp3agic.InvalidDataException {
+    public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
 
         this.path = dir;
+        extractMetaData(dir);
+        makeMusicPanel();
+    }
+    private void extractMetaData(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
         Mp3File mp3file = new Mp3File(dir);
         time = mp3file.getLengthInSeconds();
 
@@ -91,12 +95,10 @@ public class Music extends JPanel{
         System.out.println("Time = " + time);
         System.out.println("Artist = " + artist);
         System.out.println("Genre = " + genre);
-        makeMusicPanel();
     }
     private void makeMusicPanel(){
-
+        this.addMouseListener(mouseHandler);
         this.setLayout(new FlowLayout());
-
         this.setMinimumSize(new Dimension(700, 40));
         this.setMaximumSize(new Dimension(700, 40));
 
@@ -169,6 +171,7 @@ public class Music extends JPanel{
     public String getPath() {
         return path;
     }
+
     public static void saveMusics(ArrayList<Music> musics){
         ArrayList<MusicInfo>musicInfos = new ArrayList<>();
 
@@ -191,6 +194,21 @@ public class Music extends JPanel{
             System.err.println(e.getMessage());
         }
 
+    }
+
+    public void playMusic(){
+
+    }
+    public void pauseMusic(){
+
+    }
+    private class MouseHandler extends MouseInputAdapter {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            if (e.getSource() == this)
+                System.out.println("clicked!");
+//            GUI.nowPlaying = this;
+        }
     }
 
 }

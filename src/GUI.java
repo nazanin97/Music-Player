@@ -1,6 +1,5 @@
 import com.mpatric.mp3agic.InvalidDataException;
 import com.mpatric.mp3agic.UnsupportedTagException;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.MouseInputAdapter;
@@ -15,6 +14,7 @@ public class GUI {
     private ArrayList<Music>songs;
     private ArrayList<Music>recentlyPlayed;
     private ArrayList<Music>mostPlayed;
+    public static Music nowPlaying;
     private static JFrame frame;
     private static JPanel mainPanel;
     private static JPanel bottomPanel;
@@ -239,7 +239,7 @@ public class GUI {
     }
     private void createSettings(){
         screen3 = new JPanel();
-//        screen3.setBackground(Color.lightGray);
+        screen3.setBackground(new Color(139, 177, 237));
         SpringLayout sLayout = new SpringLayout();
         JPanel[] panels = new JPanel[3];
 
@@ -261,7 +261,7 @@ public class GUI {
         color.setFont(new Font("Arial", Font.PLAIN, 20));
         String[] fonts = {"Serif", "SansSerif", "Monospaced"};
         String[] sizes = {"10", "12", "14", "16", "18", "20", "22", "24"};
-        String[] colors = {"red", "black", "pink"};
+        String[] colors = {"red", "black", "pink", "white", "yellow", "blue", "cyan"};
 
         comboBoxes[0] = new JComboBox(fonts);
         comboBoxes[1] = new JComboBox(sizes);
@@ -552,16 +552,25 @@ public class GUI {
             //play or pause
             else if(e.getSource() == controlButtons[3]){
                 if (mode2.equals("play")){
+
                     mode2 = "pause";
                     ImageIcon icon = new ImageIcon("pics/4-play.png");
                     icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
+                    /*
+                    TODO pause the music
+                    nowPlaying.pauseMusic();
+                    */
                 }
                 else{
                     mode2 = "play";
                     ImageIcon icon = new ImageIcon("pics/7-pause.png");
                     icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
+                     /*
+                    TODO play the music
+                    nowPlaying.playMusic();
+                    */
                 }
             }
             //play next song
