@@ -1,5 +1,12 @@
 import com.mpatric.mp3agic.InvalidDataException;
 import com.mpatric.mp3agic.UnsupportedTagException;
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.TagException;
+
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.MouseInputAdapter;
@@ -103,7 +110,7 @@ public class GUI {
         bottomPanel.add(barPanel, BorderLayout.SOUTH);
         bottomPanel.add(screen, BorderLayout.CENTER);
     }
-    public static void repaint(){
+    static void repaint(){
         screen2.revalidate();
         screen2.repaint();
         bottomPanel.revalidate();
@@ -119,7 +126,6 @@ public class GUI {
 
     private void createLibraryScreen(){
         screen2 = new JPanel();
-
         //screen2.setBackground(Color.GREEN);
         //screen2.setLayout(new BoxLayout(screen2, BoxLayout.Y_AXIS));
         part1();
@@ -210,6 +216,7 @@ public class GUI {
             for (MusicInfo m:infos) {
                 Music music = new Music(m.path);
                 music.setRating(m.rating);
+                music.setStarsButtons();
                 music.setRecentlyPlayed(m.recent);
                 music.setNumberOfPlays(m.numPlays);
                 songs.add(music);
@@ -220,6 +227,18 @@ public class GUI {
             fi.close();
         }catch (IOException | ClassNotFoundException | InvalidDataException | UnsupportedTagException ex){
             ex.printStackTrace();
+        } catch (CannotReadException e) {
+            e.printStackTrace();
+        } catch (ReadOnlyFileException e) {
+            e.printStackTrace();
+        } catch (TagException e) {
+            e.printStackTrace();
+        } catch (UnsupportedAudioFileException e) {
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        } catch (InvalidAudioFrameException e) {
+            e.printStackTrace();
         }
 
         //TODO fill mostPlayed arrayList with songs with maximum numberOfPlays//
@@ -567,10 +586,9 @@ public class GUI {
                     ImageIcon icon = new ImageIcon("pics/7-pause.png");
                     icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
-                     /*
-                    TODO play the music
+
                     nowPlaying.playMusic();
-                    */
+
                 }
             }
             //play next song
@@ -605,7 +623,9 @@ public class GUI {
                     try {
                         newMusic = new Music(chooser.getSelectedFile().getPath());
                         songs.add(newMusic);
-                    } catch (IOException | UnsupportedTagException | InvalidDataException e1) {
+                    } catch (IOException | UnsupportedTagException | InvalidDataException |
+                            InvalidAudioFrameException | LineUnavailableException | UnsupportedAudioFileException |
+                            TagException | ReadOnlyFileException | CannotReadException e1) {
                         e1.printStackTrace();
                     }
                 }
@@ -643,7 +663,6 @@ public class GUI {
         @Override
         public void actionPerformed(ActionEvent e) {
 
-//            frame.revalidate();
         }
     }
 }

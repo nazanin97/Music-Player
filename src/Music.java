@@ -1,5 +1,9 @@
 import com.mpatric.mp3agic.*;
-
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.TagException;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.event.MouseInputAdapter;
 import java.awt.*;
@@ -10,6 +14,12 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 public class Music extends JPanel{
+//    private String status="";
+//    private File f;
+//    private Long currentFrame;
+//    private Clip clip;
+//    private AudioInputStream audioInputStream;
+
     private int rating;
     private String title;
     private Lyrics lyrics;
@@ -21,7 +31,8 @@ public class Music extends JPanel{
     private byte[] albumImageData;
     private boolean recentlyPlayed;
     private int numberOfPlays;
-    private MouseHandler mouseHandler;
+    private ArrayList<Star>starsButtons;
+
 
     public String getTitle() {
         return title;
@@ -57,12 +68,48 @@ public class Music extends JPanel{
         this.numberOfPlays = numberOfPlays;
     }
 
-    public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
+    public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException, UnsupportedAudioFileException, LineUnavailableException, CannotReadException, ReadOnlyFileException, InvalidAudioFrameException, TagException {
 
         this.path = dir;
         extractMetaData(dir);
         makeMusicPanel();
     }
+//    private void extractMetaData(String dir) throws IOException, CannotReadException, TagException, InvalidAudioFrameException
+//            , ReadOnlyFileException,UnsupportedAudioFileException,
+//            IOException, LineUnavailableException
+//
+//    {
+//        this.path = dir;
+//        this.f = new File(dir);
+//        AudioFile audioFile = AudioFileIO.read(new File(dir));
+//        this.artist = audioFile.getTag().getFirst(FieldKey.ARTIST);
+//        this.title = audioFile.getTag().getFirst(FieldKey.TITLE);
+//        this.album = audioFile.getTag().getFirst(FieldKey.ALBUM);
+//        this.genre = audioFile.getTag().getFirst(FieldKey.GENRE);
+//        Tag tag = audioFile.getTag();
+//        this.time = audioFile.getAudioHeader().getTrackLength() ;
+//        // create AudioInputStream object
+//        this.audioInputStream =
+//                AudioSystem.getAudioInputStream(new File(dir).getAbsoluteFile());
+//
+//        // create clip reference
+//        this.clip = AudioSystem.getClip();
+//
+//        // open audioInputStream to the clip
+//        clip.open(audioInputStream);
+//
+//        clip.loop(Clip.LOOP_CONTINUOUSLY);
+//
+//
+//
+//
+//        System.out.println("Title = " + title);
+//        System.out.println("Album = " + album);
+//        System.out.println("Time = " + time);
+//        System.out.println("Artist = " + artist);
+//        System.out.println("Genre = " + genre);
+//
+//    }
     private void extractMetaData(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
         Mp3File mp3file = new Mp3File(dir);
         time = mp3file.getLengthInSeconds();
@@ -88,7 +135,6 @@ public class Music extends JPanel{
 //                this.genre = id3v2Tag.getGenreDescription();
 
             albumImageData = id3v2Tag.getAlbumImage();
-
         }
         System.out.println("Title = " + title);
         System.out.println("Album = " + album);
@@ -97,7 +143,12 @@ public class Music extends JPanel{
         System.out.println("Genre = " + genre);
     }
     private void makeMusicPanel(){
-        this.addMouseListener(mouseHandler);
+        this.addMouseListener(new MouseInputAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                GUI.nowPlaying = Music.this;
+            }
+        });
         this.setLayout(new FlowLayout());
         this.setMinimumSize(new Dimension(700, 40));
         this.setMaximumSize(new Dimension(700, 40));
@@ -125,17 +176,32 @@ public class Music extends JPanel{
         stars.setLayout(new FlowLayout(FlowLayout.CENTER));
         stars.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 50));
 
+        starsButtons = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             Star button = new Star();
+            starsButtons.add(button);
             stars.add(button);
         }
         this.add(hold);
         this.add(stars);
     }
+    public void setStarsButtons(){
+        for (int i = 0; i < rating; i++) {
+            starsButtons.get(i).setMode(2);
+        }
+    }
     public void setRating(int rating) {
         this.rating = rating;
     }
-
+    public void setRating(){
+        int count = 0;
+        for (int i = 0; i < 4; i++) {
+            if(starsButtons.get(i).getMode() == 2){
+                count++;
+            }
+        }
+        setRating(count);
+    }
     public void setLyrics(Lyrics lyrics) {
         this.lyrics = lyrics;
     }
@@ -176,6 +242,7 @@ public class Music extends JPanel{
         ArrayList<MusicInfo>musicInfos = new ArrayList<>();
 
         for (Music d:musics) {
+            d.setRating();
             MusicInfo musicInfo = new MusicInfo(d);
             musicInfos.add(musicInfo);
         }
@@ -193,22 +260,13 @@ public class Music extends JPanel{
         }catch(Exception e){
             System.err.println(e.getMessage());
         }
-
     }
+    public void playMusic() {
 
-    public void playMusic(){
 
     }
     public void pauseMusic(){
 
     }
-    private class MouseHandler extends MouseInputAdapter {
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            if (e.getSource() == this)
-                System.out.println("clicked!");
-//            GUI.nowPlaying = this;
-        }
-    }
-
 }
+
