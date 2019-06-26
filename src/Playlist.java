@@ -1,11 +1,15 @@
+import javax.swing.*;
 import java.util.ArrayList;
 
 public class Playlist {
     ArrayList<Music>musics;
     private String name;
+    private JLabel addSong;
+
     public Playlist(String name){
         musics = new ArrayList<>();
         this.name = name;
+        addSong = new JLabel();
     }
     public void addMusic(Music music){
         musics.add(music);
