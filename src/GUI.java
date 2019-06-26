@@ -24,6 +24,8 @@ public class GUI {
     private ArrayList<Playlist>playlists;
 
     public static Music nowPlaying;
+    //private int offset = 0;
+    public static Play p;
 
     private static JFrame frame;
     private static JPanel mainPanel;
@@ -32,14 +34,14 @@ public class GUI {
     private static JPanel barPanel;
 
     private static JPanel screen;
-    private static JPanel screen1;         //now playing screen
+    private static Visualizer screen1;         //now playing screen
     private static JPanel screen2;         //library screen
     private static JPanel screen3;         //settings screen
     private JPanel titles;
 
     private JScrollPane jScrollPane;
 
-    JButton[] controlButtons;
+    static JButton[] controlButtons;
     JButton[] westLabels;
 
     private JLabel addSong;
@@ -257,8 +259,9 @@ public class GUI {
         repaint();
     }
     private void createPlayScreen(){
-        screen1 = new JPanel();
-        //screen1.setBackground(Color.lightGray);
+        screen1 = new Visualizer();
+
+        screen1.setBackground(Color.lightGray);
         //TODO: GHAZAL: add visualization here//
     }
     private void createSettings(){
@@ -493,10 +496,11 @@ public class GUI {
                         HttpURLConnectionExample h = null;
                         try {
                             h = new HttpURLConnectionExample(nowPlaying.getTitle(), nowPlaying.getArtist());
+                            content.setText(h.getLyric());
                         } catch (IOException e1) {
                             e1.printStackTrace();
                         }
-                        content.setText(h.getLyric());
+
                     }
                 });
                 holding.add(findLyrics);
@@ -624,18 +628,20 @@ public class GUI {
                     ImageIcon icon = new ImageIcon("pics/4-play.png");
                     icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
-                    /*
-                    TODO pause the music
-                    nowPlaying.pauseMusic();
-                    */
+                    nowPlaying.offset = p.pause();
+
                 }
                 else{
+                    if (nowPlaying == null)
+                        return;
                     mode2 = "play";
                     ImageIcon icon = new ImageIcon("pics/7-pause.png");
                     icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
                     controlButtons[3].setIcon(icon);
 
-                    nowPlaying.playMusic();
+                    p = new Play(nowPlaying.offset, nowPlaying);
+                    p.start();
+
                 }
             }
             //play next song
