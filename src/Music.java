@@ -1,15 +1,4 @@
 import com.mpatric.mp3agic.*;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
-import org.jaudiotagger.tag.FieldKey;
-import org.jaudiotagger.tag.Tag;
-import org.jaudiotagger.tag.TagException;
-import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.MouseInputAdapter;
@@ -21,15 +10,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
-import static javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED;
-import static javax.sound.sampled.AudioSystem.getAudioInputStream;
-
 public class Music extends JPanel{
-//    private String status="";
-//    private File f;
-//    private Long currentFrame;
-//    private Clip clip;
-//    private AudioInputStream audioInputStream;
 
     private int rating;
     private String title;
@@ -81,48 +62,13 @@ public class Music extends JPanel{
         this.numberOfPlays = numberOfPlays;
     }
 
-    public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException, UnsupportedAudioFileException, LineUnavailableException, CannotReadException, ReadOnlyFileException, InvalidAudioFrameException, TagException {
+    public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
 
         this.path = dir;
         extractMetaData(dir);
         makeMusicPanel();
     }
-    //    private void extractMetaData(String dir) throws IOException, CannotReadException, TagException, InvalidAudioFrameException
-//            , ReadOnlyFileException,UnsupportedAudioFileException,
-//            IOException, LineUnavailableException
-//
-//    {
-//        this.path = dir;
-//        this.f = new File(dir);
-//        AudioFile audioFile = AudioFileIO.read(new File(dir));
-//        this.artist = audioFile.getTag().getFirst(FieldKey.ARTIST);
-//        this.title = audioFile.getTag().getFirst(FieldKey.TITLE);
-//        this.album = audioFile.getTag().getFirst(FieldKey.ALBUM);
-//        this.genre = audioFile.getTag().getFirst(FieldKey.GENRE);
-//        Tag tag = audioFile.getTag();
-//        this.time = audioFile.getAudioHeader().getTrackLength() ;
-//        // create AudioInputStream object
-//        this.audioInputStream =
-//                AudioSystem.getAudioInputStream(new File(dir).getAbsoluteFile());
-//
-//        // create clip reference
-//        this.clip = AudioSystem.getClip();
-//
-//        // open audioInputStream to the clip
-//        clip.open(audioInputStream);
-//
-//        clip.loop(Clip.LOOP_CONTINUOUSLY);
-
-//        System.out.println("Title = " + title);
-//        System.out.println("Album = " + album);
-//        System.out.println("Time = " + time);
-//        System.out.println("Artist = " + artist);
-//        System.out.println("Genre = " + genre);
-//
-//    }
-    private void extractMetaData(String dir) throws InvalidDataException, IOException, UnsupportedTagException, CannotReadException , TagException ,InvalidAudioFrameException
-            ,ReadOnlyFileException ,UnsupportedAudioFileException,
-            IOException, LineUnavailableException{
+    private void extractMetaData(String dir) throws InvalidDataException, UnsupportedTagException, IOException{
         this.path = dir;
         Mp3File mp3file = new Mp3File(dir);
 
@@ -134,9 +80,7 @@ public class Music extends JPanel{
             this.title = id3v1Tag.getTitle();
             this.album = id3v1Tag.getAlbum();
             this.genre = id3v1Tag.getGenreDescription();
-//            System.out.println(id3v1Tag.getGenreDescription());
         }
-
 
         if (mp3file.hasId3v2Tag()) {
             ID3v2 id3v2Tag = mp3file.getId3v2Tag();
@@ -150,8 +94,6 @@ public class Music extends JPanel{
             if (this.genre == "" || this.genre.toLowerCase() == "unknown")
                 this.genre = id3v2Tag.getGenreDescription();
 
-//            System.out.println(id3v2Tag.getGenreDescription());
-
             albumImageData = id3v2Tag.getAlbumImage();
         }
 
@@ -161,8 +103,10 @@ public class Music extends JPanel{
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (GUI.nowPlaying != null) {
-                    GUI.nowPlaying.offset = 0;
+                    //if (GUI.nowPlaying.offset != 0)
                     GUI.p.pause();
+                    GUI.nowPlaying.offset = 0;
+
                     GUI.nowPlaying = Music.this;
                     GUI.p = new Play(0, Music.this);
                     GUI.p.start();
@@ -171,6 +115,7 @@ public class Music extends JPanel{
                 else
                     GUI.nowPlaying = Music.this;
 
+                recentlyPlayed = true;
                 Border border = BorderFactory.createLineBorder(Color.BLUE, 1);
                 for (Music m:GUI.songs) {
                     m.setBorder(null);
@@ -224,7 +169,7 @@ public class Music extends JPanel{
     }
     public void setRating(){
         int count = 0;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             if(starsButtons.get(i).getMode() == 2){
                 count++;
             }
@@ -267,37 +212,50 @@ public class Music extends JPanel{
         return path;
     }
 
-    public static void saveMusics(ArrayList<Music> musics){
-        ArrayList<MusicInfo>musicInfos = new ArrayList<>();
+    public static void saveMusics(ArrayList<Music> musics, ArrayList<Playlist>playlists){
+        ArrayList<MusicInfo>musicInfos1 = new ArrayList<>();
+
+        ArrayList<ArrayList<MusicInfo>> playlistInfos = new ArrayList<>();
 
         for (Music d:musics) {
             d.setRating();
             MusicInfo musicInfo = new MusicInfo(d);
-            musicInfos.add(musicInfo);
+            musicInfos1.add(musicInfo);
+        }
+        for (Playlist p:playlists) {
+            ArrayList<MusicInfo>musicInfos2 = new ArrayList<>();
+            for (Music m:p.getMusics()) {
+                m.setRating();
+                MusicInfo musicInfo = new MusicInfo(m);
+                musicInfos2.add(musicInfo);
+            }
+            playlistInfos.add(musicInfos2);
         }
 
-        writeInfos(musicInfos);
-    }
-    private static void writeInfos(ArrayList<MusicInfo>m){
         try{
             FileOutputStream fileOut = new FileOutputStream("songs.info");
             ObjectOutputStream oos = new ObjectOutputStream (fileOut);
-            oos.writeObject(m);
+            oos.writeObject(musicInfos1);
             oos.close();
             fileOut.close();
 
         }catch(Exception e){
             System.err.println(e.getMessage());
         }
-    }
-    public void playMusic() {
 
-        numberOfPlays++;
+        int k = 1;
+        for (ArrayList a:playlistInfos) {
+            try{
+                FileOutputStream fileOut = new FileOutputStream("./playLists/playlist" + k + ".info");
+                ObjectOutputStream oos = new ObjectOutputStream (fileOut);
+                oos.writeObject(a);
+                oos.close();
+                fileOut.close();
 
-    }
-
-
-    public void pauseMusic(){
-
+            }catch(Exception e){
+                System.err.println(e.getMessage());
+            }
+            k++;
+        }
     }
 }
