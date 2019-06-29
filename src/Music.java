@@ -1,13 +1,12 @@
 import com.mpatric.mp3agic.*;
+
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.MouseInputAdapter;
 import java.awt.*;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 
 public class Music extends JPanel{
@@ -24,8 +23,9 @@ public class Music extends JPanel{
     private boolean recentlyPlayed;
     private int numberOfPlays;
     private ArrayList<Star>starsButtons;
-    private File f;
+    //private File f;
     public int offset = 0;
+    private long msTime;
 
 
     public String getTitle() {
@@ -51,6 +51,8 @@ public class Music extends JPanel{
     public String getTime() {
         long min = time / 60;
         long sec = time % 60;
+        if(sec < 10)
+            return min + ":0" + sec;
         return min + ":" + sec;
     }
 
@@ -61,7 +63,25 @@ public class Music extends JPanel{
     public void setNumberOfPlays(int numberOfPlays) {
         this.numberOfPlays = numberOfPlays;
     }
-
+    public JLabel getImage() throws InvalidDataException, IOException, UnsupportedTagException {
+        if(!(GUI.nowPlaying == null))
+        {
+            String imagePath = GUI.nowPlaying.getPath();
+            Mp3File mp3file = new Mp3File(imagePath);
+            ID3v2 id3v2Tag = mp3file.getId3v2Tag();
+            albumImageData = id3v2Tag.getAlbumImage();
+            JLabel jLabel = new JLabel();
+            ImageIcon imageIcon;
+            if (albumImageData != null){
+                Image image = ImageIO.read(new ByteArrayInputStream(albumImageData));
+                image = image.getScaledInstance(300, 190, Image.SCALE_SMOOTH);
+                imageIcon = new ImageIcon(image);
+                jLabel.setIcon(imageIcon);
+            }
+            return jLabel;
+        }
+        return null;
+    }
     public Music(String dir) throws InvalidDataException, IOException, UnsupportedTagException {
 
         this.path = dir;
@@ -73,6 +93,7 @@ public class Music extends JPanel{
         Mp3File mp3file = new Mp3File(dir);
 
         time = mp3file.getLengthInSeconds();
+        msTime = mp3file.getLengthInMilliseconds();
 
         if (mp3file.hasId3v1Tag()) {
             ID3v1 id3v1Tag = mp3file.getId3v1Tag();
@@ -102,18 +123,18 @@ public class Music extends JPanel{
         this.addMouseListener(new MouseInputAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (GUI.nowPlaying != null) {
-                    //if (GUI.nowPlaying.offset != 0)
+                if (GUI.getMode2().equals("play")){
                     GUI.p.pause();
-                    GUI.nowPlaying.offset = 0;
-
                     GUI.nowPlaying = Music.this;
                     GUI.p = new Play(0, Music.this);
                     GUI.p.start();
                 }
-
-                else
+                else {
                     GUI.nowPlaying = Music.this;
+                    GUI.p = new Play(0, Music.this);
+                    GUI.p.start();
+                    GUI.makePlay();
+                }
 
                 recentlyPlayed = true;
                 Border border = BorderFactory.createLineBorder(Color.BLUE, 1);
@@ -138,7 +159,14 @@ public class Music extends JPanel{
         labels[0].setText(getTitle());
         labels[1].setText(getTime());
         labels[2].setText(getArtist());
-        labels[3].setText(getGenre());
+        //labels[3].setText(getGenre());
+        labels[3].setText("unknown");
+        labels[3].addMouseListener(new MouseInputAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                //todo
+            }
+        });
         JPanel hold = new JPanel();
         hold.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         hold.setPreferredSize(new Dimension(400, 40));
@@ -212,6 +240,9 @@ public class Music extends JPanel{
         return path;
     }
 
+    public long getMsTime(){
+        return this.msTime;
+    }
     public static void saveMusics(ArrayList<Music> musics, ArrayList<Playlist>playlists){
         ArrayList<MusicInfo>musicInfos1 = new ArrayList<>();
 

@@ -26,7 +26,7 @@ public class Playlist {
         musics = new ArrayList<>();
         name = n;
         label = new JLabel(n);
-        label.setPreferredSize(new Dimension(190, 30));
+        label.setPreferredSize(new Dimension(200, 30));
         label.setHorizontalAlignment(SwingConstants.CENTER);
     }
     public Playlist(String name, JLabel l, JPanel screen){

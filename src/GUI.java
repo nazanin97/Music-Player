@@ -7,9 +7,16 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class GUI {
+
+    private GetLyric thread2 = null;
 
     static ArrayList<Music>songs;
     static ArrayList<Music>favorites;
@@ -27,7 +34,7 @@ public class GUI {
     private static JPanel barPanel;
 
     private static JPanel screen;
-    private static Visualizer screen1;         //now playing screen
+    private static JPanel screen1;         //now playing screen
     public static JPanel screen2;         //library screen
     private static JPanel screen3;         //settings screen
     private JPanel titles;
@@ -41,12 +48,27 @@ public class GUI {
     private JToolBar toolBar;
     private MouseHandler mouseHandler;
     private String mode1;       //for shuffle or repeat
-    private String mode2;       //for play or pause
+    private static String mode2;       //for play or pause
     private boolean mute;       //for mute or not
     Border border;
     JComboBox[] comboBoxes;
 
-    public GUI(){
+    public static String getMode2(){
+        return mode2;
+    }
+
+    public static void makePlay(){
+        mode2 = "play";
+        ImageIcon icon = new ImageIcon("pics/7-pause.png");
+        icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+        controlButtons[3].setIcon(icon);
+    }
+
+    public GUI() throws InvalidDataException, IOException, UnsupportedTagException {
+
+        PlayButtonUpdator thread = new PlayButtonUpdator();
+        thread.start();
+
         comboBoxes = new JComboBox[4];
         for (int i = 0; i < 4; i++) {
             comboBoxes[i] = new JComboBox();
@@ -206,7 +228,7 @@ public class GUI {
         }
         Lyrics.setFontName( "" + comboBoxes[0].getSelectedItem());
         Lyrics.setFontSize(Integer.valueOf("" + comboBoxes[1].getSelectedItem()));
-        Lyrics.setColor("" + comboBoxes[2].getSelectedItem());
+        Lyrics.setColor((Color)comboBoxes[2].getSelectedItem());
 
     }
     private void saveSettings(){
@@ -281,7 +303,7 @@ public class GUI {
     }
 
     private void createPlayScreen(){
-        screen1 = new Visualizer();
+        screen1 = new JPanel();
 
         screen1.setBackground(Color.lightGray);
         //TODO: GHAZAL: add visualization here//
@@ -309,12 +331,32 @@ public class GUI {
         JLabel color = new JLabel("Color:");
         color.setFont(new Font("Arial", Font.PLAIN, 20));
         String[] fonts = {"Serif", "SansSerif", "Monospaced"};
-        String[] sizes = {"10", "12", "14", "16", "18", "20", "22", "24"};
-        String[] colors = {"red", "black", "pink", "white", "yellow", "blue", "cyan"};
+        Integer[] sizes = {16, 18, 20, 22, 24, 26, 28, 30, 32, 34};
+        Color[] colors = {Color.red, Color.black, Color.pink, Color.gray, Color.yellow, Color.blue, Color.cyan};
 
         comboBoxes[0] = new JComboBox(fonts);
         comboBoxes[1] = new JComboBox(sizes);
         comboBoxes[2] = new JComboBox(colors);
+
+        comboBoxes[0].addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Lyrics.setFontName("" + comboBoxes[0].getSelectedItem());
+                System.out.println("" + comboBoxes[0].getSelectedItem());
+            }
+        });
+        comboBoxes[1].addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Lyrics.setFontSize((Integer) comboBoxes[1].getSelectedItem());
+            }
+        });
+        comboBoxes[2].addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Lyrics.setColor((Color) comboBoxes[2].getSelectedItem());
+            }
+        });
 
         panels[0].add(l);
         panels[0].add(font);
@@ -415,7 +457,7 @@ public class GUI {
             @Override
             public void mouseClicked(MouseEvent e) {
                 JLabel label = new JLabel("playlist" + (playlists.size()+1));
-                label.setPreferredSize(new Dimension(190, 30));
+                label.setPreferredSize(new Dimension(200, 30));
                 label.setHorizontalAlignment(SwingConstants.CENTER);
 
                 Playlist newPlaylist = new Playlist(label.getText(), label, screen2);
@@ -548,6 +590,9 @@ public class GUI {
                 findLyrics.addMouseListener(new MouseInputAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
+                        if (thread2 != null)
+                            thread2.terminate();
+
                         LyricDownloader l;
                         l = new LyricDownloader(nowPlaying.getArtist(), nowPlaying.getTitle());
                         l.start();
@@ -575,8 +620,33 @@ public class GUI {
 
                             String lyricPath = chooser.getSelectedFile().getPath();
 
-                            //todo set lyrics to content in next line
-                            content.setText("...");
+                            if (lyricPath.endsWith("txt")){
+                                if (thread2 != null)
+                                    thread2.terminate();
+                                Path pathP = Paths.get(lyricPath);
+
+//                                try {
+//
+//                                    //String text = Files.readString(pathP, StandardCharsets.US_ASCII);
+//                                    //content.setText(text);
+//                                } catch (IOException ex) {
+//                                    ex.printStackTrace();
+//                                }
+                            }
+                            else if(lyricPath.endsWith("lrc")){
+                                if (thread2 != null)
+                                    thread2.terminate();
+                                thread2 = new GetLyric(lyricPath, content);
+                                thread2.start();
+
+                            } else {
+                                if (thread2 != null)
+                                    thread2.terminate();
+                                content.setText("Please Choose a txt/lrc file.");
+
+
+
+                            }
                         }
 
                     }
@@ -673,6 +743,27 @@ public class GUI {
         public void mouseClicked(MouseEvent e) {
             //if user clicked on now playing tab
             if (e.getSource() == toolBar.getComponent(0)) {
+
+                if (nowPlaying != null){
+                    JPanel musicArt = new JPanel();
+//                    musicArt.setSize(screen1.getWidth(), screen1.getHeight());
+
+                    JLabel label = null;
+                    try {
+                        label = nowPlaying.getImage();
+                    } catch (InvalidDataException ex) {
+                        ex.printStackTrace();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    } catch (UnsupportedTagException ex) {
+                        ex.printStackTrace();
+                    }
+                    if (label != null) {
+                        musicArt.add(label);
+                        screen1 = musicArt;
+                        screen1.revalidate();
+                    }
+                }
                 bottomPanel.remove(2);
                 bottomPanel.add(screen1, BorderLayout.CENTER);
                 westPanel.hide();
@@ -800,6 +891,79 @@ public class GUI {
                 showFavorites();
             }
             repaint();
+        }
+    }
+    private class PlayButtonUpdator extends Thread
+    {
+        @Override
+        public void run()
+        {
+            while(true) {
+                if (p != null) {
+                    try {
+                        if (p.getComplete() && mode2.equals("play")) {
+                            mode2 = "pause";
+                            ImageIcon icon = new ImageIcon("pics/4-play.png");
+                            icon.setImage(icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+                            controlButtons[3].setIcon(icon);
+                        }
+                    }catch (NullPointerException e){
+                        //  System.out.println("Null pointer");
+                    }
+
+                }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private class GetLyric extends Thread
+    {
+        private String lrcPath;
+        private Lyrics lrc = new Lyrics();
+        private String lyric = "";
+        JTextArea content;
+        private boolean flag = true;
+
+        public void terminate(){
+            System.out.println("terminating ...");
+            this.flag = false;
+        }
+
+        public GetLyric(String lrcPath, JTextArea content){
+            this.lrcPath = lrcPath;
+            this.content = content;
+            Font font = new Font(Lyrics.getFontName(), Font.PLAIN, Lyrics.getFontSize());
+            this.content.setFont(font);
+            this.content.setForeground(Lyrics.getColor());
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (!p.getComplete() && this.flag) {
+
+                    if (p != null) {
+                        long currentTime = p.getPosition() + nowPlaying.offset;
+                        this.lyric = lrc.lyricAdjuster(lrcPath, currentTime);
+                        //this.content.setFont(new Font(Lyrics.getFontName(), Font.PLAIN, Lyrics.getFontSize()));
+                        this.content.setText(this.lyric);
+                    }
+
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                System.out.println("TERMINATED");
+            } catch (NullPointerException e) {
+            }
         }
     }
 }

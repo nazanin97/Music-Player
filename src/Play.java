@@ -43,4 +43,11 @@ public class Play extends Thread {
         p.close();
         return last + offset;
     }
+    public boolean getComplete(){
+        return p.getComplete();
+    }
+
+    public int getPosition(){
+        return p.getPosition();
+    }
 }
